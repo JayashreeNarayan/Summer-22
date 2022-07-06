@@ -1,0 +1,19 @@
+#!/bin/bash
+
+
+echo ==Error analysis==
+
+./errors -c1 -s200 -b20 trace.txt
+./errors -c2 -s200 -b20 trace.txt
+./errors -c3 -s200 -b20 trace.txt
+./errors -c4 -s200 -b20 trace.txt
+./errors -c5 -s200 -b20 trace.txt
+#for q in {1..8..1}
+
+#do
+
+#./errors -c$q -s100 -b10 eigen.dat
+
+#done 
+
+echo Done
