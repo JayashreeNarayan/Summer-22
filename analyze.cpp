@@ -1,6 +1,5 @@
 //Code for 2 matrices whose action is given as eqn 1 in the multi-matrx models paper and is a 0-d model, so no lattice sites, just a single point.
 #include <iostream>
-#include <conio.h>
 #include <math.h>
 #include <stdlib.h>
 #include <fstream>
@@ -27,42 +26,27 @@ double rando()     //function to generate random numbers between [0,1) an analou
 int main()
 {   typedef complex<double> comp;
     static int first_time = 1;
-    static ofstream f_corr_X, f_corr_Y, f_site_X, f_site_Y, f_a_rate_X, f_a_rate_Y, ftrace;
+    static ofstream f_a_rate, f_trace;
 
     if (first_time)
     {
-       f_corr_X.open("corr_matrix_X.txt");      //file to save the correlator of X and Y (below)
-        if (f_corr_X.bad())
-        {cout << "Failed to open correlator file\n"<< flush;}
-       f_corr_Y.open("corr_matrix_Y.txt");
-        if (f_corr_Y.bad())
-        {cout << "Failed to open correlator file\n"<< flush;}
-       f_a_rate_X.open("acceptance_matrix_X.txt");      //file to save the acceptance rate of X and Y (below)
-        if (f_a_rate_X.bad())
+       f_a_rate.open("data/acceptance_rate.txt");      //file to save the acceptance rate of X and Y (below)
+        if (f_a_rate.bad())
         {cout << "Failed to open acceptance rate file\n"<< flush;}
-       f_a_rate_Y.open("acceptance_matrix_Y.txt");
-        if (f_a_rate_Y.bad())
-        {cout << "Failed to open acceptance rate file\n"<< flush;}
-       f_site_X.open("site_matrix_X.txt");          //file to save the values of the site matrices of X and Y (below)
-        if (f_site_X.bad())
-        {cout << "Failed to open sites data file\n"<< flush;}
-       f_site_Y.open("site_matrix_Y.txt");
-        if (f_site_Y.bad())
-        {cout << "Failed to open sites data file\n"<< flush;}
-        ftrace.open("trace.txt");      //file to save the trace of all the terms in action
-        if (ftrace.bad())
+        f_trace.open("data/trace.txt");      //file to save the trace of all the terms in action
+        if (f_trace.bad())
         {cout << "Failed to open trace file\n"<< flush;}
         first_time = 0;
     }
 
     int N=5;              //dimension of matrix
     int THERM = 0;        //number of thermalization steps
-    int SWEEPS = 10000;   //number of generation steps
-    int GAP = 100;        //interval between measurements
-    double DELTA = 0.5;   //random shift range, −DELTA <= delta <= DELTA
+    int SWEEPS = 1000000;   //number of generation steps
+    int GAP = 1000;        //interval between measurements
+    double DELTA = 0.07;   //random shift range, −DELTA <= delta <= DELTA
 
-    double u=0.0, L=0.5;         // the random number generated for the sake of probability and L is the value of Lambda
-    int accept_X=0, accept_Y=0.0;     //acceptance rate of X and Y 
+    double u=0.0, L=8.0;         // the random number generated for the sake of probability and L is the value of Lambda
+    int accept_count=0 ;     //acceptance rate of X and Y 
 
     double w=1.0, m=1.0, re, im;    //w is the frequency and m is the mass, dS is the change in action, re and im are varibles to get the real and imaginary parts of a complex number
 
@@ -92,74 +76,50 @@ for(int s=0; s<SWEEPS; s++)
     
     for (int r = 0; r < N; r++)
     {
-        for (int c = r; c < N; c++)
+        for (int c = 0; c < N; c++)
         {
-            if ((r == c) && (r != N - 1))
+            if (r == c)
             {
                 re = 2.0 * DELTA * (rando() - 0.5);
-                im = 2.0 * DELTA * (rando() - 0.5);
-                shiftX[r][c] = comp(re, im); // makes only the (0,0) element random
+                im = 0.0;
+                shiftX[r][c] = comp(re, im); // makes only the (n,n) element random, diagonal elemets only real
 
                 re = 2.0 * DELTA * (rando() - 0.5);
-                im = 2.0 * DELTA * (rando() - 0.5);
-                shiftY[r][c] = comp(re, im); // makes only the (0,0) element random
+                im = 0.0;
+                shiftY[r][c] = comp(re, im); // makes only the (n,n) element random
                 
             }
-            if (r != c)
+            if (r > c)
             {
                 re = 2.0 * DELTA * (rando() - 0.5);
                 im = 2.0 * DELTA * (rando() - 0.5);
                 shiftX[r][c] = comp(re, im); // generating random numbers for the non-diagonal elements
 
-                shiftX[c][r] = shiftX[r][c]; // To make it symmetric matrix
+                shiftX[c][r] = comp(re, (-1.0)*im); // To make it hermitian matrix
 
                 re = 2.0 * DELTA * (rando() - 0.5);
                 im = 2.0 * DELTA * (rando() - 0.5);
                 shiftY[r][c] = comp(re, im); // generating random numbers for the non-diagonal elements
 
-                shiftY[c][r] = shiftY[r][c]; // To make it symmetric matrix
+                shiftY[c][r] = comp(re, (-1.0)*im); // To make it hermitian matrix
             }
         }
     }
-    for (int r = 0; r < N; r++)
-        for (int c = 0; c < N; c++)
-        {
-            double re = real(shiftX[r][c]);
-            double im = imag(shiftX[r][c]);
-            if (r < c)
-            {
-                shiftX[r][c] = comp(re, -im); // to make the matrix hermitian wrt to the non-diagonal elements
-            }
-            re,im=0.0;
-
-            re = real(shiftY[r][c]);
-            im = imag(shiftY[r][c]);
-            if (r < c)
-            {
-                shiftY[r][c] = comp(re, -im); // to make the matrix hermitian wrt to the non-diagonal elements
-            }
-        }
+    
     double sum_X, sum_Y;
     for(int k=0; k<N; k++)
         {
             sum_X+=real(shiftX[k][k]);
             sum_Y+=real(shiftY[k][k]);
         }
-    
-    for (int k = 0; k < N; k++)
-    {
-        shiftX[k][k] = real(shiftX[k][k]);
-        shiftY[k][k] = real(shiftY[k][k]);
-
-    }
 
     sum_X=sum_X/N;
     sum_Y=sum_Y/N;
 
     //comp sum = (0, 0);
-    for (int k = 0; k < N - 1; k++)
-        {   shiftX[k][k]=real(shiftX[k][k])-sum_X;      //finally we have generated matrices that are hermitian
-            shiftY[k][k]=real(shiftY[k][k])-sum_Y;
+    for (int k = 0; k < N ; k++)
+        {   shiftX[k][k]=comp(real(shiftX[k][k])-sum_X,0);      //finally we have generated matrices that are hermitian
+            shiftY[k][k]=comp(real(shiftY[k][k])-sum_Y,0);
         }
 
     for(int r=0; r<N; r++)
@@ -173,6 +133,7 @@ for(int s=0; s<SWEEPS; s++)
 
     comp X2n[N][N], Y2n[N][N], XYn[N][N], YXn[N][N], XYcommn[N][N], XY2n[N][N];
     comp X2o[N][N], Y2o[N][N], XYo[N][N], YXo[N][N], XYcommo[N][N], XY2o[N][N]; 
+    comp X2[N][N], Y2[N][N], XY[N][N], YX[N][N], XYcomm[N][N], XYcomm2[N][N],X2Y2[N][N],XYXY[N][N]; 
 
     double Tr1=0.0;
     double Tr2=0.0;
@@ -208,7 +169,7 @@ for(int s=0; s<SWEEPS; s++)
         {   XY2n[r][c]=0.0;
             for(int k=0; k<N; k++)
                 {
-                    XY2n[r][c]=XYcommn[r][k]*XYcommn[k][c];
+                    XY2n[r][c]+=XYcommn[r][k]*XYcommn[k][c];
                 }
         }
 
@@ -242,7 +203,7 @@ for(int s=0; s<SWEEPS; s++)
         {   XY2o[r][c]=0.0;
             for(int k=0; k<N; k++)
                 {
-                    XY2o[r][c]=XYcommo[r][k]*XYcommo[k][c];
+                    XY2o[r][c]+=XYcommo[r][k]*XYcommo[k][c];
                 }
         }
 
@@ -254,7 +215,7 @@ for(int s=0; s<SWEEPS; s++)
         Tr3+=real(XY2n[k][k]-XY2o[k][k]);
     }
 
-    ftrace<<Tr1<<" "<<Tr2<<" "<<Tr3<<endl;        //at every sweep we are finding the value of the trace of each of the terms in dS
+    //ftrace<<Tr1<<" "<<Tr2<<" "<<Tr3<<endl;        //at every sweep we are finding the value of the trace of each of the terms in dS
     double dS=Tr1+Tr2-(L/N)*Tr3;                   //calculating the final value of dS
 
     double e=exp(-dS);
@@ -268,8 +229,7 @@ for(int s=0; s<SWEEPS; s++)
                     siteX[r][c]=nsiteX[r][c];
                     siteY[r][c]=nsiteY[r][c];
                }
-    accept_X++;     //SOMETHING WRONG HERE
-    accept_Y++;
+    accept_count++;   
     }
     else
     {
@@ -283,22 +243,63 @@ for(int s=0; s<SWEEPS; s++)
 
     if(s%GAP==0)
     {
-        for(int r=0; r<N; r++)
-            for(int c=0; c<N; c++)
-                {f_site_X<<siteX[r][c]<<" ";
-                    if((r==N)&&(c=N))
-                    {f_site_X<<endl;}
+    double Tr1=0.0;
+    double Tr2=0.0;
+    double Tr3=0.0;
+    double Tr4=0.0;
+    double Tr5=0.0;
+
+    for(int r=0; r<N; r++)
+        for(int c=0; c<N; c++)
+        {   X2[r][c]=0.0;    //the matrices that will hold the results of all the necessary matrices
+            Y2[r][c]=0.0;
+            XY[r][c]=0.0;
+            YX[r][c]=0.0;
+            
+            for(int k=0; k<N; k++)
+                {
+                    X2[r][c]+=siteX[r][k]*siteX[k][c];        //does X^2
+                    Y2[r][c]+=siteY[r][k]*siteY[k][c];        //does Y^2
+    
+                    XY[r][c]+=siteX[r][k]*siteY[k][c];        //does XY
+                    YX[r][c]+=siteY[r][k]*siteX[k][c];        //does YX
                 }
 
-        for(int r=0; r<N; r++)
-            for(int c=0; c<N; c++)
-                {f_site_Y<<siteY[r][c]<<" ";
-                    if((r==N)&&(c=N))
-                    {f_site_Y<<endl;}
-                }
+        }
+    
+    for(int r=0; r<N; r++)
+        for(int c=0; c<N; c++)
+            {
+                XYcomm[r][c]=XY[r][c]-YX[r][c];
+                
+            }
 
-    f_a_rate_X<<(double)accept_X*100/(s+1) <<endl; 
-    f_a_rate_Y<<(double)accept_Y*100/(s+1) <<endl; 
+    for(int r=0; r<N; r++)
+        for(int c=0; c<N; c++)
+        {   XYcomm2[r][c]=0.0;
+            XYXY[r][c]=0.0;
+            X2Y2[r][c]=0.0;
+            for(int k=0; k<N; k++)
+                { 
+                    XYcomm2[r][c]+=XYcomm[r][k]*XYcomm[k][c];
+                    XYXY[r][c]+=XY[r][k]*XY[k][c];
+                    X2Y2[r][c]+=X2[r][k]*Y2[k][c];
+                }
+        }
+
+
+    for(int k=0; k<N; k++)
+    {
+        Tr1+=real(X2[k][k]);
+        Tr2+=real(Y2[k][k]);
+        Tr3+=real(XYcomm2[k][k]);
+        Tr4+=real(XYXY[k][k]);
+        Tr5+=real(X2Y2[k][k]);
+    }
+
+    f_trace<<Tr1<<" "<<Tr2<<" "<<Tr3<<" "<<Tr4<<" "<<Tr5<<endl;        //at every sweep we are finding the value of the trace of each of the terms in dS
+
+    f_a_rate<<(double)accept_count*100/(s+1) <<endl;  
     }
 
 }//end of sweeps
